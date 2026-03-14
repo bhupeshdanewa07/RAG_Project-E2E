@@ -130,8 +130,8 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 **Bhupesh Danewa**
 - Enthusiastic AI Engineer
-- [LinkedIn](#) (Add your link)
-- [GitHub](#) (Add your link)
+- [LinkedIn](https://www.linkedin.com/in/bhupesh-danewa/)
+- [GitHub](https://github.com/bhupeshdanewa07)
 
 ---
 
