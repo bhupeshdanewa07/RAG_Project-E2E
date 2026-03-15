@@ -147,6 +147,10 @@ def init_session_state():
         st.session_state.initialized = False
     if 'history' not in st.session_state:
         st.session_state.history = []
+    if 'last_result' not in st.session_state:
+        st.session_state.last_result = None
+    if 'clear_input' not in st.session_state:
+        st.session_state.clear_input = False
 
 @st.cache_resource
 def initialize_rag():
@@ -220,58 +224,72 @@ def main():
     
     st.markdown("---")
     
+    # Clear text input if flagged from previous search
+    if st.session_state.clear_input:
+        st.session_state.search_input = ""
+        st.session_state.clear_input = False
+    
     # Search interface
     with st.form("search_form"):
         question = st.text_input(
             "Enter your question:",
-            placeholder="What would you like to know?"
+            placeholder="What would you like to know?",
+            key="search_input"
         )
         submit = st.form_submit_button("🔍 Search")
     
-    # Process search
+    # Process search — only the spinner is visible during this phase
     if submit and question:
         if st.session_state.rag_system:
-            # 1. Show spinner while fetching the result
             with st.spinner("Searching the knowledge base..."):
                 start_time = time.time()
-                
-                # Get answer
                 result = st.session_state.rag_system.run(question)
-                
                 elapsed_time = time.time() - start_time
-                
-            # 2. Add to history outside spinner
+            
+            # Store results in session state
+            st.session_state.last_result = {
+                'answer': result['answer'],
+                'retrieved_docs': result['retrieved_docs'],
+                'time': elapsed_time
+            }
+            
+            # Add to history
             st.session_state.history.append({
                 'question': question,
                 'answer': result['answer'],
                 'time': elapsed_time
             })
             
-            # 3. Render the output independently of the spinner
-            st.markdown("### 💡 Answer")
-            st.success(result['answer'])
-            
-            # Show retrieved docs in expander outside spinner
-            with st.expander("📄 Source Documents"):
-                for i, doc in enumerate(result['retrieved_docs'], 1):
-                    # Extract parent source (URL or file path) from metadata
-                    source = doc.metadata.get("source", "Unknown source")
-                    # For file paths, show just the file name; for URLs, show as-is
-                    if source and not source.startswith("http"):
-                        from pathlib import Path as _Path
-                        source_display = _Path(source).name
-                    else:
-                        source_display = source
+            # Flag to clear input and rerun for a clean render
+            st.session_state.clear_input = True
+            st.rerun()
+    
+    # Render the latest result from session state (flicker-free)
+    if st.session_state.last_result:
+        res = st.session_state.last_result
+        
+        st.markdown("### 💡 Answer")
+        st.success(res['answer'])
+        
+        with st.expander("📄 Source Documents"):
+            for i, doc in enumerate(res['retrieved_docs'], 1):
+                # Extract parent source (URL or file path) from metadata
+                source = doc.metadata.get("source", "Unknown source")
+                if source and not source.startswith("http"):
+                    from pathlib import Path as _Path
+                    source_display = _Path(source).name
+                else:
+                    source_display = source
 
-                    st.markdown(f"**📁 Source:** `{source_display}`")
-                    st.text_area(
-                        f"Document {i}",
-                        doc.page_content[:300] + "...",
-                        height=100,
-                        disabled=True
-                    )
-            
-            st.caption(f"⏱️ Response time: {elapsed_time:.2f} seconds")
+                st.markdown(f"**📁 Source:** `{source_display}`")
+                st.text_area(
+                    f"Document {i}",
+                    doc.page_content[:300] + "...",
+                    height=100,
+                    disabled=True
+                )
+        
+        st.caption(f"⏱️ Response time: {res['time']:.2f} seconds")
     
     # Show history
     if st.session_state.history:
