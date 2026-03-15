@@ -20,6 +20,7 @@ class RAGNodes:
         self.retriever = retriever
         self.llm = llm
         self._agent = None  # lazy-init agent
+        self._wiki = WikipediaAPIWrapper(top_k_results=2, lang="en")
 
     def retrieve_docs(self, state: RAGState) -> RAGState:
         """Classic retriever node"""
