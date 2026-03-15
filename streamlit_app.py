@@ -254,6 +254,16 @@ def main():
             # Show retrieved docs in expander outside spinner
             with st.expander("📄 Source Documents"):
                 for i, doc in enumerate(result['retrieved_docs'], 1):
+                    # Extract parent source (URL or file path) from metadata
+                    source = doc.metadata.get("source", "Unknown source")
+                    # For file paths, show just the file name; for URLs, show as-is
+                    if source and not source.startswith("http"):
+                        from pathlib import Path as _Path
+                        source_display = _Path(source).name
+                    else:
+                        source_display = source
+
+                    st.markdown(f"**📁 Source:** `{source_display}`")
                     st.text_area(
                         f"Document {i}",
                         doc.page_content[:300] + "...",
